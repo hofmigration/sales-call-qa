@@ -129,6 +129,33 @@
   .chk{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;color:var(--ink-soft);cursor:pointer;margin-top:4px}
   .chk input{margin-top:2px;width:auto;-webkit-appearance:auto;appearance:auto;accent-color:var(--fail)}
 
+  /* multiple Ziwo IDs */
+  .ziwo-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .ziwo-row .ziwo-input{flex:1;min-width:0}
+  .ziwo-row .rm{flex:0 0 auto;width:42px;height:42px;border:1px solid var(--line);background:var(--field);border-radius:var(--r-sm);color:var(--steel);font-size:20px;line-height:1;cursor:pointer;transition:.12s}
+  .ziwo-row .rm:hover{border-color:var(--fail);color:var(--fail);background:var(--fail-bg)}
+  #ziwoRows.one .rm{display:none}
+  .addbtn{margin-top:10px;background:transparent;border:1px dashed #B9C2E0;color:var(--royal);font-family:var(--f-body);font-weight:600;font-size:13.5px;padding:9px 14px;border-radius:var(--r-sm);cursor:pointer;transition:.12s}
+  .addbtn:hover{border-color:var(--royal);background:rgba(36,58,158,.05)}
+
+  /* tabs */
+  .tabs{display:inline-flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px;margin-bottom:14px;box-shadow:0 8px 24px -16px rgba(19,26,56,.4)}
+  .tab{border:0;background:transparent;font-family:var(--f-body);font-weight:600;font-size:14px;color:var(--ink-soft);padding:9px 18px;border-radius:999px;cursor:pointer;transition:.12s}
+  .tab:hover{color:var(--navy)}
+  .tab.active{background:var(--royal);color:#fff}
+  /* stats */
+  .stats-totals{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .stat{flex:1;min-width:150px;background:var(--field);border:1px solid var(--line);border-radius:var(--r-sm);padding:18px}
+  .stat .n{font-family:var(--f-display);font-weight:600;font-size:38px;color:var(--navy);line-height:1}
+  .stat .l{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);margin-top:5px}
+  .st-sec-title{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);margin:22px 0 6px}
+  .stbl{width:100%;border-collapse:collapse}
+  .stbl th{text-align:left;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel);padding:8px 10px;border-bottom:1px solid var(--line);font-weight:500}
+  .stbl td{padding:10px;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink)}
+  .stbl td.num{font-variant-numeric:tabular-nums;font-weight:600;color:var(--navy)}
+  .stbl tr:last-child td{border-bottom:0}
+  .stbl th:not(:first-child),.stbl td:not(:first-child){text-align:right}
+
   .hidden{display:none !important}
 
   .submit{width:100%;padding:15px;background:var(--royal);color:#fff;border:0;border-radius:12px;font-family:var(--f-body);font-weight:700;font-size:15.5px;letter-spacing:.2px;cursor:pointer;margin-top:22px;transition:.14s;box-shadow:0 10px 22px -12px rgba(36,58,158,.7)}
@@ -206,6 +233,11 @@
   <main>
     <div class="stage">
 
+      <div class="tabs">
+        <button class="tab active" type="button" data-view="audit">New audit</button>
+        <button class="tab" type="button" data-view="stats">Stats</button>
+      </div>
+
       <section class="formcard" id="formCard">
         <div class="panel-head">
           <h2>New call audit</h2>
@@ -232,36 +264,36 @@
                 <select id="program"><option value="">Select program&hellip;</option></select>
               </label>
               <label class="field">
-                <span class="flabel">Call date <span class="req">*</span></span>
-                <input type="date" id="callDate">
+                <span class="flabel">Audit date <span class="req">*</span></span>
+                <input type="date" id="auditDate">
               </label>
             </div>
-            <div class="two">
-              <label class="field">
-                <span class="flabel">Ziwo Call ID <span class="req">*</span></span>
-                <input type="text" id="ziwoId" placeholder="e.g. 8471023" inputmode="text">
-              </label>
-              <label class="field">
-                <span class="flabel">Client name <span class="opt">(optional)</span></span>
-                <input type="text" id="clientName" placeholder="Client on the call">
-              </label>
+            <div class="field">
+              <span class="flabel">Ziwo Call ID(s) <span class="req">*</span></span>
+              <div id="ziwoRows"></div>
+              <button type="button" class="addbtn" id="addZiwo">+ Add another Ziwo ID</button>
+              <p class="hint">One ID per call. If this lead was called several times, add each call's Ziwo ID.</p>
             </div>
             <label class="field">
               <span class="flabel">HubSpot link <span class="opt">(optional)</span></span>
               <input type="url" id="hubspotLink" inputmode="url" placeholder="https://app.hubspot.com/contacts/23735726/record/0-3/&hellip;">
             </label>
             <div class="two">
-              <div class="field">
-                <span class="flabel">Call direction</span>
-                <div class="seg" id="dirSeg">
-                  <label><input type="radio" name="dir" value="Inbound" checked><span>Inbound</span></label>
-                  <label><input type="radio" name="dir" value="Outbound"><span>Outbound</span></label>
-                </div>
-              </div>
+              <label class="field">
+                <span class="flabel">Client name <span class="opt">(optional)</span></span>
+                <input type="text" id="clientName" placeholder="Client on the call">
+              </label>
               <label class="field">
                 <span class="flabel">Call duration (min) <span class="opt">(optional)</span></span>
                 <input type="number" id="duration" min="0" step="1" placeholder="e.g. 12" inputmode="numeric">
               </label>
+            </div>
+            <div class="field">
+              <span class="flabel">Call direction</span>
+              <div class="seg" id="dirSeg">
+                <label><input type="radio" name="dir" value="Inbound" checked><span>Inbound</span></label>
+                <label><input type="radio" name="dir" value="Outbound"><span>Outbound</span></label>
+              </div>
             </div>
           </div>
 
@@ -330,6 +362,24 @@
         <button class="linkbtn" id="againBtn">Audit another call</button>
       </section>
 
+      <!-- stats -->
+      <section class="formcard hidden" id="statsCard">
+        <div class="panel-head">
+          <h2>Audit stats</h2>
+          <p>Calls are counted by Ziwo ID, so an audit covering several calls counts them all.</p>
+        </div>
+        <div class="panel-body">
+          <div class="seg" id="rangeSeg" style="margin-bottom:18px">
+            <label><input type="radio" name="range" value="all" checked><span>All time</span></label>
+            <label><input type="radio" name="range" value="month"><span>30 days</span></label>
+            <label><input type="radio" name="range" value="week"><span>7 days</span></label>
+            <label><input type="radio" name="range" value="today"><span>Today</span></label>
+          </div>
+          <div id="statsBody"><p class="hint">Loading&hellip;</p></div>
+          <button class="linkbtn" id="refreshStats" style="margin-top:18px">Refresh</button>
+        </div>
+      </section>
+
     </div>
   </main>
 
@@ -342,7 +392,7 @@
   /* =====================================================================
      STEP 1 — PASTE YOUR APPS SCRIPT LINK HERE (the /exec URL from deploying Code.gs).
      ===================================================================== */
-  const API_URL = "https://script.google.com/macros/s/AKfycbyyT-k3RbW8YNCY9ahCY5MMFyBTe9-Gga_2n2gSLMw8ywD3p_IMGfhXKIs0_kj5ShuL/exec";
+  const API_URL = "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
 
   /* =====================================================================
      STEP 2 — Consultants (same names as the meeting booking form) and programs.
@@ -416,7 +466,33 @@
   // dropdowns
   CONSULTANTS.forEach(function (n) { const o = document.createElement('option'); o.value = n; o.textContent = n; $('consultant').appendChild(o); });
   PROGRAMS.forEach(function (p) { const o = document.createElement('option'); o.value = p; o.textContent = p; $('program').appendChild(o); });
-  $('callDate').value = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' });
+  $('auditDate').value = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' });
+
+  /* ---- Ziwo Call ID rows (add/remove without refreshing the form) ---- */
+  function makeZiwoRow() {
+    const row = document.createElement('div'); row.className = 'ziwo-row';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'ziwo-input'; inp.placeholder = 'e.g. 8471023'; inp.setAttribute('inputmode', 'text');
+    const rm = document.createElement('button');
+    rm.type = 'button'; rm.className = 'rm'; rm.setAttribute('aria-label', 'Remove'); rm.innerHTML = '&times;';
+    rm.addEventListener('click', function () { row.remove(); refreshZiwo(); });
+    row.appendChild(inp); row.appendChild(rm);
+    return row;
+  }
+  function refreshZiwo() {
+    const rows = $('ziwoRows');
+    if (!rows.children.length) rows.appendChild(makeZiwoRow());
+    rows.classList.toggle('one', rows.children.length === 1);
+  }
+  $('addZiwo').addEventListener('click', function () {
+    const rows = $('ziwoRows'); rows.appendChild(makeZiwoRow()); refreshZiwo();
+    const inputs = rows.querySelectorAll('.ziwo-input'); inputs[inputs.length - 1].focus();
+  });
+  $('ziwoRows').appendChild(makeZiwoRow()); refreshZiwo();
+  function collectZiwo() {
+    return [].slice.call($('ziwoRows').querySelectorAll('.ziwo-input'))
+      .map(function (i) { return i.value.trim(); }).filter(Boolean);
+  }
 
   // render scorecard
   (function renderScorecard() {
@@ -507,8 +583,8 @@
       auditor: $('auditor').value.trim(),
       consultant: $('consultant').value,
       program: $('program').value,
-      callDate: $('callDate').value,
-      ziwoId: $('ziwoId').value.trim(),
+      auditDate: $('auditDate').value,
+      ziwoIds: collectZiwo(),
       hubspotLink: link,
       clientName: $('clientName').value.trim(),
       direction: (document.querySelector('input[name=dir]:checked') || {}).value || '',
@@ -525,8 +601,8 @@
     if (!payload.auditor)       return showError('Please enter your name as the auditor.');
     if (!payload.consultant)    return showError('Please select the consultant.');
     if (!payload.program)       return showError('Please select the program.');
-    if (!payload.callDate)      return showError('Please pick the call date.');
-    if (!payload.ziwoId)        return showError('Please enter the Ziwo Call ID.');
+    if (!payload.auditDate)     return showError('Please pick the audit date.');
+    if (!payload.ziwoIds.length) return showError('Please enter at least one Ziwo Call ID.');
     if (!payload.summary)       return showError('Please add a short overall summary.');
     if (link && !/^https?:\/\//i.test(link)) return showError('The HubSpot link should start with http:// or https://, or leave it blank.');
 
@@ -542,6 +618,7 @@
         if (res && res.ok) {
           $('formCard').classList.add('hidden');
           $('doneCard').classList.remove('hidden');
+          submitted = true;
           $('doneScore').textContent = res.scorePct + '%';
           const dr = $('doneResult');
           dr.textContent = res.result;
@@ -562,6 +639,64 @@
   });
 
   $('againBtn').addEventListener('click', function () { location.reload(); });
+
+  /* ---- tabs + stats ---- */
+  var submitted = false;
+  function setActive(v){ document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-view') === v); }); }
+  function showView(v){
+    if (v === 'stats') {
+      $('formCard').classList.add('hidden'); $('doneCard').classList.add('hidden');
+      $('statsCard').classList.remove('hidden'); setActive('stats'); fetchStats(currentRange());
+    } else {
+      $('statsCard').classList.add('hidden');
+      $('formCard').classList.toggle('hidden', submitted);
+      $('doneCard').classList.toggle('hidden', !submitted);
+      setActive('audit');
+    }
+  }
+  document.querySelectorAll('.tab').forEach(function(t){ t.addEventListener('click', function(){ showView(t.getAttribute('data-view')); }); });
+
+  function currentRange(){ return (document.querySelector('input[name=range]:checked') || {}).value || 'all'; }
+  document.querySelectorAll('input[name=range]').forEach(function(r){ r.addEventListener('change', function(){ fetchStats(currentRange()); }); });
+  $('refreshStats').addEventListener('click', function(){ fetchStats(currentRange()); });
+
+  function statsMsg(m){ $('statsBody').innerHTML = '<p class="hint">' + m + '</p>'; }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  function fetchStats(range){
+    if (!API_READY) { statsMsg('Connect the form first \u2014 paste the script link into API_URL near the top.'); return; }
+    statsMsg('Loading\u2026');
+    fetch(API_URL + '?action=stats&range=' + encodeURIComponent(range || 'all'), { method: 'GET' })
+      .then(function(r){ return r.json(); })
+      .then(renderStats)
+      .catch(function(){ statsMsg('Could not load stats. Please try Refresh.'); });
+  }
+
+  function renderStats(d){
+    if (!d || !d.ok) { statsMsg('Could not load stats.'); return; }
+    var h = '<div class="stats-totals">' +
+      '<div class="stat"><div class="n">' + d.totalCalls + '</div><div class="l">Calls audited</div></div>' +
+      '<div class="stat"><div class="n">' + d.totalAudits + '</div><div class="l">Audits</div></div>' +
+      '</div>';
+    h += '<div class="st-sec-title">By auditor</div>';
+    if (d.byAuditor && d.byAuditor.length) {
+      h += '<table class="stbl"><tr><th>Auditor</th><th>Calls</th><th>Audits</th><th>Avg score</th><th>Pass rate</th></tr>';
+      d.byAuditor.forEach(function(a){
+        h += '<tr><td>' + esc(a.auditor) + '</td><td class="num">' + a.calls + '</td><td class="num">' + a.audits +
+             '</td><td class="num">' + (a.avgScore == null ? '\u2014' : a.avgScore + '%') + '</td><td class="num">' + a.passRate + '%</td></tr>';
+      });
+      h += '</table>';
+    } else { h += '<p class="hint">No audits recorded in this range yet.</p>'; }
+    h += '<div class="st-sec-title">By consultant</div>';
+    if (d.byConsultant && d.byConsultant.length) {
+      h += '<table class="stbl"><tr><th>Consultant</th><th>Calls audited</th><th>Audits</th></tr>';
+      d.byConsultant.forEach(function(c){
+        h += '<tr><td>' + esc(c.consultant) + '</td><td class="num">' + c.calls + '</td><td class="num">' + c.audits + '</td></tr>';
+      });
+      h += '</table>';
+    } else { h += '<p class="hint">No audits recorded in this range yet.</p>'; }
+    $('statsBody').innerHTML = h;
+  }
 </script>
 </body>
 </html>
