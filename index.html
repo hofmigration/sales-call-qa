@@ -395,6 +395,7 @@ select option { background: #fff; color: var(--text); }
     <div class="chip-list" id="chipList"></div>
 
     <div class="sb-actions">
+      <div class="autofail-notice" id="autofailNotice">⛔ CRITICAL — Score forced to 0</div>
       <button class="btn-sb-submit" id="submitBtn" onclick="submitAudit()">⬆ Submit to Sheet</button>
       <button class="btn-sb-reset" onclick="resetForm()">↺ Reset Form</button>
     </div>
@@ -486,6 +487,14 @@ select option { background: #fff; color: var(--text); }
   border-radius:6px; padding:3px 8px; white-space:nowrap;
 }
 .sec-hdr-right { display:flex; align-items:center; gap:9px; }
+.hdr-toggle {
+  font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; letter-spacing:.04em;
+  padding:5px 11px; border-radius:7px; cursor:pointer; transition:all .16s; white-space:nowrap;
+}
+.hdr-toggle.crit       { background:#fff; border:1px solid #fecaca; color:#dc2626; }
+.hdr-toggle.crit:hover { background:#fef2f2; border-color:#ef4444; }
+.hdr-toggle.crit.on    { background:linear-gradient(135deg,#dc2626,#991b1b); border-color:#dc2626; color:#fff;
+                         box-shadow:0 0 0 2px rgba(220,38,38,.25); }
 </style>
 
 <script>
@@ -506,13 +515,13 @@ const ATTRIBUTES = [
     desc:'Rapport built and maintained with the lead' },
   { id:'discovery',   n:4,  icon:'🔍', name:'Discovery & Qualification',        pts:15,
     desc:'Needs discovered and lead properly qualified' },
-  { id:'valueAlign',  n:5,  icon:'💡', name:'Value & Solution Alignment',       pts:15,
-    desc:'Value proposition aligned to the lead\'s profile' },
-  { id:'etiquette',   n:6,  icon:'🗣️', name:'Communication Etiquette',          pts:12,
+  { id:'solutionAlign', n:5,  icon:'💡', name:'Solution Alignment & Mislead Information', pts:15, critical:true,
+    desc:'Solution aligned to the lead\'s profile with no misleading information' },
+  { id:'etiquette',   n:6,  icon:'🗣️', name:'Communication Etiquette',          pts:11,
     desc:'Tone, clarity and professional etiquette maintained' },
   { id:'deadAir',     n:7,  icon:'⏱️', name:'Dead Air & Call Control',          pts:8,
     desc:'No excessive dead air; call kept under control' },
-  { id:'objection',   n:8,  icon:'🛡️', name:'Objection Handling',               pts:10,
+  { id:'objection',   n:8,  icon:'🛡️', name:'Objection Handling',               pts:11,
     desc:'Objections handled confidently and accurately' },
   { id:'closing',     n:9,  icon:'✅', name:'Closing & Next Steps',             pts:7,
     desc:'Clear close with agreed next steps' },
@@ -522,6 +531,7 @@ const ATTRIBUTES = [
 
 const TOTAL_POSSIBLE = ATTRIBUTES.reduce((t,a) => t + a.pts, 0); // 100
 const answers = {};   // attributeId -> 'YES' | 'NO' | null
+let criticalBreach = false;  // set by the Critical button — forces the whole score to 0 (reversible)
 const CIRC = 313;
 
 ATTRIBUTES.forEach(a => answers[a.id] = null);
@@ -548,6 +558,7 @@ function renderAttributes() {
       <div class="sec-hdr">
         <div class="sec-title"><span class="sec-icon">${a.icon}</span> ${a.n}. ${a.name}</div>
         <div class="sec-hdr-right">
+          ${a.critical ? `<button class="hdr-toggle crit${criticalBreach?' on':''}" onclick="toggleCriticalBreach()">${criticalBreach?'✓ Critical — score 0':'⚠ Critical'}</button>` : ''}
           <span class="wt-badge">${a.pts}%</span>
           <div class="sec-pts" id="pts-${a.id}">${a.pts} / ${a.pts}</div>
         </div>
@@ -597,10 +608,24 @@ function handleYN(btn) {
   refreshScore();
 }
 
+/* ─── CRITICAL BREACH ────────────────────────── */
+// Fired from the Critical button on "Solution Alignment & Mislead Information".
+// Forces the whole audit to 0. Clicking again fully reverses it.
+function toggleCriticalBreach() {
+  criticalBreach = !criticalBreach;
+  renderAttributes();
+  refreshScore();
+  showToast(criticalBreach
+    ? '⛔ Critical — misleading information. Whole score set to 0.'
+    : '↩ Critical removed — score restored.', criticalBreach ? 'error' : 'success');
+}
+
 /* ─── SCORING ────────────────────────────────── */
 // Starts at 100. Marking an attribute "No" removes its full weightage.
+// A critical breach overrides everything and forces 0.
 function attrEarned(a) { return answers[a.id] === 'NO' ? 0 : a.pts; }
 function calcScore() {
+  if (criticalBreach) return 0;
   return Math.round(ATTRIBUTES.reduce((t,a) => t + attrEarned(a), 0) * 10) / 10;
 }
 
@@ -613,13 +638,17 @@ function refreshScore() {
   arc.style.stroke = total>=85 ? '#4ade80' : total>=60 ? '#fbbf24' : '#f87171';
 
   const g = document.getElementById('score-grade'), h = document.getElementById('score-hint');
-  if (total===100)    { g.style.color='#4ade80'; g.textContent='PERFECT';    h.textContent='All attributes passing'; }
+  if (criticalBreach) { g.style.color='#f87171'; g.textContent='CRITICAL BREACH'; h.textContent='Misleading info — score forced to 0'; }
+  else if (total===100)    { g.style.color='#4ade80'; g.textContent='PERFECT';    h.textContent='All attributes passing'; }
   else if (total>=85) { g.style.color='#4ade80'; g.textContent='COMPLIANT';  h.textContent='Above 85% target'; }
   else if (total>=60) { g.style.color='#fbbf24'; g.textContent='NEEDS WORK'; h.textContent='Below 85% target'; }
   else                { g.style.color='#f87171'; g.textContent='CRITICAL';   h.textContent='Significant gaps found'; }
 
+  const notice = document.getElementById('autofailNotice');
+  if (notice) notice.classList.toggle('show', criticalBreach);
+
   ATTRIBUTES.forEach(a => {
-    const earned = attrEarned(a);
+    const earned = criticalBreach ? 0 : attrEarned(a);
     const pEl = document.getElementById('pts-'+a.id);
     if (pEl) { pEl.textContent = `${earned} / ${a.pts}`; pEl.className = 'sec-pts' + (earned < a.pts ? ' z' : ''); }
     const chip = document.querySelector(`.sb-chip[data-key="${a.id}"]`), cp = document.getElementById('cp-'+a.id);
@@ -650,12 +679,13 @@ function submitAudit() {
     consultantName: cn, auditorName: au, auditDate: document.getElementById('auditDate').value,
     ziwoId: zw, hubspotLink: hl, callDuration: du,
     comments: document.getElementById('comments').value,
-    score: total, scorePercent: total, team: TEAM
+    score: total, scorePercent: total, team: TEAM,
+    criticalBreach: criticalBreach ? 'YES' : ''
   };
   // each attribute: the answer, plus its earned/max
   ATTRIBUTES.forEach(a => {
     payload[a.id] = answers[a.id] || 'YES';
-    payload['pts_' + a.id] = attrEarned(a) + '/' + a.pts;
+    payload['pts_' + a.id] = (criticalBreach ? 0 : attrEarned(a)) + '/' + a.pts;
   });
 
   // Optimistic: confirm + reset now, POST in the background.
@@ -670,6 +700,7 @@ function submitAudit() {
 
 /* ─── RESET ──────────────────────────────────── */
 function resetForm() {
+  criticalBreach = false;
   ATTRIBUTES.forEach(a => answers[a.id] = null);
   ['consultantName','auditorName','ziwoId','hubspotLink','callDuration','comments'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
