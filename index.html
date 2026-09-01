@@ -455,14 +455,29 @@ select option { background: #fff; color: var(--text); }
         </div>
         <div class="row2">
           <div class="field"><label>Audit Date *</label><input type="date" id="auditDate"/></div>
-          <div class="field"><label>Ziwo ID *</label><input type="text" id="ziwoId" placeholder="e.g. 24815"/></div>
+          <div class="field">
+            <label>Ziwo ID(s) *</label>
+            <div class="ziwo-row">
+              <input type="text" id="ziwoInput" placeholder="e.g. 24815" onkeydown="ziwoKey(event)"/>
+              <button type="button" class="btn-add" onclick="addZiwo()">+ Add</button>
+            </div>
+            <div class="chip-wrap" id="ziwoChips"></div>
+            <div class="mini-hint">One sale can have several calls — add each Ziwo ID.</div>
+          </div>
         </div>
         <div class="field">
           <label>HubSpot Link *</label>
           <input type="url" id="hubspotLink" placeholder="https://app.hubspot.com/contacts/..."/>
         </div>
         <div class="row2">
-          <div class="field"><label>Call Duration *</label><input type="text" id="callDuration" placeholder="e.g. 12:45"/></div>
+          <div class="field">
+            <label>Call Duration *</label>
+            <div class="dur-row">
+              <select id="durMin"></select><span class="dur-unit">min</span>
+              <select id="durSec"></select><span class="dur-unit">sec</span>
+              <span class="dur-preview" id="durPreview">—</span>
+            </div>
+          </div>
           <div class="field"><label>Comments / Observations</label><input type="text" id="comments" placeholder="Optional notes..."/></div>
         </div>
       </div>
@@ -487,6 +502,35 @@ select option { background: #fff; color: var(--text); }
   border-radius:6px; padding:3px 8px; white-space:nowrap;
 }
 .sec-hdr-right { display:flex; align-items:center; gap:9px; }
+/* Ziwo multi-add */
+.ziwo-row { display:flex; gap:7px; align-items:stretch; }
+.ziwo-row input { flex:1; }
+.btn-add {
+  font-family:'Space Grotesk',sans-serif; font-size:11.5px; font-weight:700; letter-spacing:.03em;
+  padding:0 15px; border-radius:8px; cursor:pointer; white-space:nowrap; transition:all .16s;
+  background:#12266e; border:1px solid #12266e; color:#fff;
+}
+.btn-add:hover { background:#1b3596; }
+.chip-wrap { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.zchip {
+  display:inline-flex; align-items:center; gap:7px; font-family:'Space Mono',monospace;
+  font-size:11px; font-weight:700; background:#eef2ff; color:#3730a3;
+  border:1px solid #c7d2fe; border-radius:7px; padding:4px 6px 4px 10px;
+}
+.zchip button {
+  border:none; background:transparent; color:#6366f1; cursor:pointer;
+  font-size:14px; line-height:1; padding:0 2px; font-weight:700;
+}
+.zchip button:hover { color:#dc2626; }
+.mini-hint { font-size:10px; color:var(--muted); margin-top:6px; }
+/* duration picker */
+.dur-row { display:flex; align-items:center; gap:7px; }
+.dur-row select { width:auto; min-width:78px; }
+.dur-unit { font-size:11px; color:var(--muted); font-weight:600; }
+.dur-preview {
+  margin-left:4px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700;
+  color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:7px; padding:4px 10px;
+}
 .hdr-toggle {
   font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; letter-spacing:.04em;
   padding:5px 11px; border-radius:7px; cursor:pointer; transition:all .16s; white-space:nowrap;
@@ -532,12 +576,62 @@ const ATTRIBUTES = [
 const TOTAL_POSSIBLE = ATTRIBUTES.reduce((t,a) => t + a.pts, 0); // 100
 const answers = {};   // attributeId -> 'YES' | 'NO' | null
 let criticalBreach = false;  // set by the Critical button — forces the whole score to 0 (reversible)
+let ziwoIds = [];            // one sale can span several calls — all IDs go into one sheet cell
 const CIRC = 313;
+
+/* ─── ZIWO IDs (multi-add) ───────────────────── */
+function addZiwo() {
+  const input = document.getElementById('ziwoInput');
+  const raw = input.value.trim();
+  if (!raw) { showToast('Enter a Ziwo ID first.','error'); return; }
+  // allow pasting several at once: "111, 222 333"
+  const parts = raw.split(/[\s,;]+/).filter(Boolean);
+  let added = 0, dupes = 0;
+  parts.forEach(p => {
+    if (ziwoIds.indexOf(p) !== -1) { dupes++; return; }
+    ziwoIds.push(p); added++;
+  });
+  input.value = '';
+  input.focus();
+  renderZiwo();
+  if (added && dupes) showToast(`Added ${added}. Skipped ${dupes} already in the list.`,'success');
+  else if (dupes)     showToast('That Ziwo ID is already added.','error');
+}
+function removeZiwo(i) { ziwoIds.splice(i,1); renderZiwo(); }
+function ziwoKey(e) { if (e.key === 'Enter') { e.preventDefault(); addZiwo(); } }
+function renderZiwo() {
+  document.getElementById('ziwoChips').innerHTML = ziwoIds.map((z,i) =>
+    `<span class="zchip">${z}<button type="button" title="Remove" onclick="removeZiwo(${i})">×</button></span>`
+  ).join('');
+}
+
+/* ─── CALL DURATION (picker) ─────────────────── */
+function buildDuration() {
+  const mm = document.getElementById('durMin'), ss = document.getElementById('durSec');
+  let m = '<option value="">– min –</option>';
+  for (let i = 0; i <= 120; i++) m += `<option value="${i}">${i}</option>`;
+  mm.innerHTML = m;
+  let s = '<option value="">– sec –</option>';
+  for (let i = 0; i <= 59; i++) s += `<option value="${i}">${String(i).padStart(2,'0')}</option>`;
+  ss.innerHTML = s;
+  mm.addEventListener('change', showDuration);
+  ss.addEventListener('change', showDuration);
+}
+function durationValue() {
+  const m = document.getElementById('durMin').value, s = document.getElementById('durSec').value;
+  if (m === '' && s === '') return '';
+  return `${parseInt(m||0,10)}:${String(parseInt(s||0,10)).padStart(2,'0')}`;
+}
+function showDuration() {
+  const v = durationValue();
+  document.getElementById('durPreview').textContent = v || '—';
+}
 
 ATTRIBUTES.forEach(a => answers[a.id] = null);
 
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('auditDate').value = new Date().toISOString().split('T')[0];
+  buildDuration();
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0)
     document.getElementById('config-banner').classList.add('show');
   renderAttributes();
@@ -661,14 +755,18 @@ function refreshScore() {
 
 /* ─── SUBMIT ─────────────────────────────────── */
 function submitAudit() {
+  // include anything typed but not yet added, so nothing is lost
+  const pending = document.getElementById('ziwoInput').value.trim();
+  if (pending) addZiwo();
+
   const cn = document.getElementById('consultantName').value,
         au = document.getElementById('auditorName').value,
-        zw = document.getElementById('ziwoId').value.trim(),
+        zw = ziwoIds.join(', '),
         hl = document.getElementById('hubspotLink').value.trim(),
-        du = document.getElementById('callDuration').value.trim();
+        du = durationValue();
 
-  if (!cn || !au || !zw || !hl || !du) {
-    showToast('Fill in Consultant, Auditor, Ziwo ID, HubSpot link and Call duration.','error'); return;
+  if (!cn || !au || !ziwoIds.length || !hl || !du) {
+    showToast('Fill in Consultant, Auditor, at least one Ziwo ID, HubSpot link and Call duration.','error'); return;
   }
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
     showToast('Sales QA web-app URL not set. Paste it into the code first.','error'); return;
@@ -677,7 +775,7 @@ function submitAudit() {
   const total = calcScore();
   const payload = {
     consultantName: cn, auditorName: au, auditDate: document.getElementById('auditDate').value,
-    ziwoId: zw, hubspotLink: hl, callDuration: du,
+    ziwoId: zw, ziwoCount: ziwoIds.length, hubspotLink: hl, callDuration: du,
     comments: document.getElementById('comments').value,
     score: total, scorePercent: total, team: TEAM,
     criticalBreach: criticalBreach ? 'YES' : ''
@@ -702,9 +800,14 @@ function submitAudit() {
 function resetForm() {
   criticalBreach = false;
   ATTRIBUTES.forEach(a => answers[a.id] = null);
-  ['consultantName','auditorName','ziwoId','hubspotLink','callDuration','comments'].forEach(id => {
+  ziwoIds = [];
+  renderZiwo();
+  ['consultantName','auditorName','ziwoInput','hubspotLink','comments'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  document.getElementById('durMin').value = '';
+  document.getElementById('durSec').value = '';
+  showDuration();
   document.getElementById('auditDate').value = new Date().toISOString().split('T')[0];
   renderAttributes();
   refreshScore();
