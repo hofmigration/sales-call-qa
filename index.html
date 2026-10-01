@@ -396,6 +396,11 @@ select option { background: #fff; color: var(--text); }
 
     <div class="sb-actions">
       <div class="autofail-notice" id="autofailNotice">⛔ CRITICAL — Score forced to 0</div>
+      <label class="email-toggle" for="sendEmail">
+        <input type="checkbox" id="sendEmail" onchange="saveEmailPref()">
+        <span class="et-box"></span>
+        <span class="et-text">✉ Email result to consultant<small id="emailHint">Sent from your Gmail · auditor copied</small></span>
+      </label>
       <button class="btn-sb-submit" id="submitBtn" onclick="submitAudit()">⬆ Submit to Sheet</button>
       <button class="btn-sb-reset" onclick="resetForm()">↺ Reset Form</button>
     </div>
@@ -423,30 +428,30 @@ select option { background: #fff; color: var(--text); }
             <select id="consultantName" required>
               <option value="">— Select Consultant —</option>
               <option>Mishal Fatima Bashir</option>
-              <option>Rabbiya Mohsin</option>
+              <option>Rabbiya Jilani</option>
               <option>Muhammad Diean</option>
               <option>Muhammad Shahzad Fiaz</option>
               <option>Fatima Zahid</option>
               <option>Ayesha Zahid</option>
-              <option>Syed Hussain Ali Haris</option>
+              <option>Syed Hussain Shah</option>
               <option>Ahmad Ali</option>
               <option>Ali Raza Qureshi</option>
               <option>Mishal Naseem</option>
               <option>Hamza Manzoor</option>
               <option>Atika Zainab</option>
-              <option>Fahad Waseem</option>
-              <option>Muhammad Momin Ashfaq</option>
-              <option>Hamad Ahmad</option>
+              <option>Fahad Butt</option>
+              <option>Momin Ashfaq</option>
+              <option>Hammad Ahmad</option>
               <option>Haleema Umar</option>
               <option>Rida Faisal</option>
-              <option>Aiman Ali</option>
-              <option>Muhammad Awaad bin Imran</option>
+              <option>Aimen Shakeel</option>
+              <option>Muhammad Awaad</option>
               <option>Muhammad Hanzla</option>
-              <option>Tuba Ahmed</option>
-              <option>Faeeh</option>
-              <option>Danish</option>
-              <option>Muqeet Haseeb Wyne</option>
-              <option>Hassan Anwer</option>
+              <option>Tuba Ahmad</option>
+              <option>Faseeh</option>
+              <option>Danish Anwar</option>
+              <option>Muqeet Haseeb</option>
+              <option>Hassan Anwar</option>
             </select>
           </div>
           <div class="field">
@@ -552,6 +557,25 @@ select option { background: #fff; color: var(--text); }
   margin-left:4px; font-family:'Space Mono',monospace; font-size:12px; font-weight:700;
   color:#3730a3; background:#eef2ff; border:1px solid #c7d2fe; border-radius:7px; padding:4px 10px;
 }
+.email-toggle {
+  display:flex; align-items:flex-start; gap:9px; cursor:pointer; user-select:none;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; padding:9px 11px; transition:all .18s;
+}
+.email-toggle:hover { background:rgba(255,255,255,.1); }
+.email-toggle input { position:absolute; opacity:0; pointer-events:none; }
+.et-box {
+  flex-shrink:0; width:16px; height:16px; margin-top:1px; border-radius:4px;
+  border:1.5px solid rgba(255,255,255,.45); background:transparent; position:relative; transition:all .15s;
+}
+.email-toggle input:checked + .et-box { background:#4ade80; border-color:#4ade80; }
+.email-toggle input:checked + .et-box::after {
+  content:''; position:absolute; left:4.5px; top:1px; width:4px; height:8px;
+  border:solid #0b1a52; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.email-toggle input:checked ~ .et-text { color:#fff; }
+.et-text { font-size:12px; font-weight:600; color:rgba(255,255,255,.7); line-height:1.35; }
+.et-text small { display:block; font-size:10px; font-weight:400; color:rgba(255,255,255,.4); margin-top:2px; }
 .hdr-toggle {
   font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; letter-spacing:.04em;
   padding:5px 11px; border-radius:7px; cursor:pointer; transition:all .16s; white-space:nowrap;
@@ -673,7 +697,7 @@ function checkZiwoDupes() {
 function buildDuration() {
   const mm = document.getElementById('durMin'), ss = document.getElementById('durSec');
   let m = '<option value="">– min –</option>';
-  for (let i = 0; i <= 120; i++) m += `<option value="${i}">${i}</option>`;
+  for (let i = 0; i <= 500; i++) m += `<option value="${i}">${i}</option>`;
   mm.innerHTML = m;
   let s = '<option value="">– sec –</option>';
   for (let i = 0; i <= 59; i++) s += `<option value="${i}">${String(i).padStart(2,'0')}</option>`;
@@ -696,6 +720,7 @@ ATTRIBUTES.forEach(a => answers[a.id] = null);
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('auditDate').value = new Date().toISOString().split('T')[0];
   buildDuration();
+  loadEmailPref();
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0)
     document.getElementById('config-banner').classList.add('show');
   renderAttributes();
@@ -842,7 +867,8 @@ function submitAudit() {
     ziwoId: zw, ziwoCount: ziwoIds.length, hubspotLink: hl, callDuration: du,
     comments: document.getElementById('comments').value,
     score: total, scorePercent: total, team: TEAM,
-    criticalBreach: criticalBreach ? 'YES' : ''
+    criticalBreach: criticalBreach ? 'YES' : '',
+    sendEmail: document.getElementById('sendEmail').checked
   };
   // each attribute: the answer, plus its earned/max
   ATTRIBUTES.forEach(a => {
@@ -856,7 +882,13 @@ function submitAudit() {
 
   fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(payload) })
     .then(r => r.json())
-    .then(res => { if (res.status !== 'success') throw new Error(res.message || 'Unknown error'); })
+    .then(res => {
+      if (res.status !== 'success') throw new Error(res.message || 'Unknown error');
+      // The audit is saved either way; the email is reported separately.
+      if (res.email === 'sent')            showToast('✉ Result emailed to ' + cn + (res.emailCc ? ' (auditor copied)' : ''), 'success');
+      else if (res.email === 'no-address') showToast('Saved — but no email on file for ' + cn + '. Add it in the Consultant Emails tab.', 'error');
+      else if (res.email === 'failed')     showToast('Saved — but the email failed: ' + (res.emailError || 'unknown'), 'error');
+    })
     .catch(e => showToast('Submission failed — please re-enter: ' + e.message, 'error'));
 }
 
@@ -877,6 +909,15 @@ function resetForm() {
   document.getElementById('auditDate').value = new Date().toISOString().split('T')[0];
   renderAttributes();
   refreshScore();
+}
+
+/* ─── EMAIL PREFERENCE ───────────────────────── */
+// Remembered per browser so the auditor sets it once.
+function saveEmailPref() {
+  try { localStorage.setItem('salesqa_sendEmail', document.getElementById('sendEmail').checked ? '1' : '0'); } catch (e) {}
+}
+function loadEmailPref() {
+  try { document.getElementById('sendEmail').checked = localStorage.getItem('salesqa_sendEmail') === '1'; } catch (e) {}
 }
 
 function showToast(msg, type='success') {
