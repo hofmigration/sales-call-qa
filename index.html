@@ -399,7 +399,7 @@ select option { background: #fff; color: var(--text); }
       <label class="email-toggle" for="sendEmail">
         <input type="checkbox" id="sendEmail" onchange="saveEmailPref()">
         <span class="et-box"></span>
-        <span class="et-text">✉ Email result to consultant<small id="emailHint">Sent from your Gmail · auditor copied</small></span>
+        <span class="et-text">✉ Email result to consultant<small id="emailHint">Sent from your Gmail · team lead &amp; auditor copied</small></span>
       </label>
       <button class="btn-sb-submit" id="submitBtn" onclick="submitAudit()">⬆ Submit to Sheet</button>
       <button class="btn-sb-reset" onclick="resetForm()">↺ Reset Form</button>
@@ -427,40 +427,37 @@ select option { background: #fff; color: var(--text); }
             <label>Consultant Name *</label>
             <select id="consultantName" required>
               <option value="">— Select Consultant —</option>
-              <option>Mishal Fatima Bashir</option>
-              <option>Rabbiya Jilani</option>
-              <option>Muhammad Diean</option>
-              <option>Muhammad Shahzad Fiaz</option>
-              <option>Fatima Zahid</option>
-              <option>Ayesha Zahid</option>
-              <option>Syed Hussain Shah</option>
-              <option>Ahmad Ali</option>
-              <option>Ali Raza Qureshi</option>
-              <option>Mishal Naseem</option>
-              <option>Hamza Manzoor</option>
-              <option>Atika Zainab</option>
-              <option>Fahad Butt</option>
-              <option>Momin Ashfaq</option>
-              <option>Hammad Ahmad</option>
-              <option>Haleema Umar</option>
-              <option>Rida Faisal</option>
-              <option>Aimen Shakeel</option>
-              <option>Muhammad Awaad</option>
-              <option>Muhammad Hanzla</option>
-              <option>Tuba Ahmad</option>
-              <option>Faseeh</option>
-              <option>Danish Anwar</option>
-              <option>Muqeet Haseeb</option>
-              <option>Hassan Anwar</option>
-              <option>Noor ul Ain</option>
-              <option>Usman Aslam</option>
-              <option>Ali Raza Shoukat</option>
-              <option>Mehran Ali</option>
-              <option>Affan Bin Kashif</option>
-              <option>Abdullah Khalil</option>
-              <option>Adil Hassan</option>
-              <option>Fazal Mehdi</option>
-              <option>Abdullah Naseer</option>
+              <optgroup label="Ali Raza Qureshi's Team">
+                <option>Ali Raza Qureshi</option>
+                <option>Fazal Mehdi</option>
+                <option>Mishal Fatima Bashir</option>
+                <option>Muhammad Shahzad Fiaz</option>
+                <option>Ayesha Zahid</option>
+                <option>Ali Raza Shoukat</option>
+                <option>Abdullah Khalil</option>
+                <option>Abdullah Naseer</option>
+              </optgroup>
+              <optgroup label="Rabbiya Jilani's Team">
+                <option>Rabbiya Jilani</option>
+                <option>Muhammad Awaad</option>
+                <option>Fatima Zahid</option>
+                <option>Muhammad Diean</option>
+                <option>Aimen Shakeel</option>
+                <option>Atika Zainab</option>
+                <option>Affan Wasti</option>
+                <option>Affan Bin Kashif</option>
+                <option>Usman Aslam</option>
+              </optgroup>
+              <optgroup label="Fahad Butt's Team">
+                <option>Fahad Butt</option>
+                <option>Tuba Ahmad</option>
+                <option>Ahmad Ali</option>
+                <option>Danish Anwar</option>
+                <option>Syed Hussain Shah</option>
+                <option>Adil Hassan</option>
+                <option>Mehran Ali</option>
+                <option>Noor ul Ain</option>
+              </optgroup>
             </select>
           </div>
           <div class="field">
@@ -894,7 +891,7 @@ function submitAudit() {
     .then(res => {
       if (res.status !== 'success') throw new Error(res.message || 'Unknown error');
       // The audit is saved either way; the email is reported separately.
-      if (res.email === 'sent')            showToast('✉ Result emailed to ' + cn + (res.emailCc ? ' (auditor copied)' : ''), 'success');
+      if (res.email === 'sent')            showToast('✉ Result emailed to ' + cn + (res.emailLead ? ' · ' + res.emailLead + ' & auditor copied' : (res.emailCc ? ' · auditor copied' : '')), 'success');
       else if (res.email === 'no-address') showToast('Saved — but no email on file for ' + cn + '. Add it in the Consultant Emails tab.', 'error');
       else if (res.email === 'failed')     showToast('Saved — but the email failed: ' + (res.emailError || 'unknown'), 'error');
     })
