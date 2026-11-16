@@ -396,6 +396,11 @@ select option { background: #fff; color: var(--text); }
 
     <div class="sb-actions">
       <div class="autofail-notice" id="autofailNotice">⛔ CRITICAL — Score forced to 0</div>
+      <label class="email-toggle esc-toggle" for="escalate">
+        <input type="checkbox" id="escalate">
+        <span class="et-box"></span>
+        <span class="et-text">⚠ Escalate to Hamza &amp; Waleed<small>Full report emailed to both · auditor copied</small></span>
+      </label>
       <label class="email-toggle" for="sendEmail">
         <input type="checkbox" id="sendEmail" onchange="saveEmailPref()">
         <span class="et-box"></span>
@@ -582,6 +587,10 @@ select option { background: #fff; color: var(--text); }
 .email-toggle input:checked ~ .et-text { color:#fff; }
 .et-text { font-size:12px; font-weight:600; color:rgba(255,255,255,.7); line-height:1.35; }
 .et-text small { display:block; font-size:10px; font-weight:400; color:rgba(255,255,255,.4); margin-top:2px; }
+/* escalate tick box — amber, so it never looks like the routine email option */
+.email-toggle.esc-toggle input:checked + .et-box { background:#fbbf24; border-color:#fbbf24; }
+.email-toggle.esc-toggle:has(input:checked) { background:rgba(251,191,36,.14); border-color:rgba(251,191,36,.6); }
+.email-toggle.esc-toggle input:checked ~ .et-text { color:#fde68a; }
 .hdr-toggle {
   font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; letter-spacing:.04em;
   padding:5px 11px; border-radius:7px; cursor:pointer; transition:all .16s; white-space:nowrap;
@@ -874,7 +883,8 @@ function submitAudit() {
     comments: document.getElementById('comments').value,
     score: total, scorePercent: total, team: TEAM,
     criticalBreach: criticalBreach ? 'YES' : '',
-    sendEmail: document.getElementById('sendEmail').checked
+    sendEmail: document.getElementById('sendEmail').checked,
+    escalate:  document.getElementById('escalate').checked
   };
   // each attribute: the answer, plus its earned/max
   ATTRIBUTES.forEach(a => {
@@ -890,10 +900,16 @@ function submitAudit() {
     .then(r => r.json())
     .then(res => {
       if (res.status !== 'success') throw new Error(res.message || 'Unknown error');
-      // The audit is saved either way; the email is reported separately.
-      if (res.email === 'sent')            showToast('✉ Result emailed to ' + cn + (res.emailLead ? ' · ' + res.emailLead + ' & auditor copied' : (res.emailCc ? ' · auditor copied' : '')), 'success');
-      else if (res.email === 'no-address') showToast('Saved — but no email on file for ' + cn + '. Add it in the Consultant Emails tab.', 'error');
-      else if (res.email === 'failed')     showToast('Saved — but the email failed: ' + (res.emailError || 'unknown'), 'error');
+      // The audit is saved either way; the emails are reported separately.
+      const good = [], bad = [];
+      if (res.email === 'sent')            good.push('✉ Result emailed to ' + cn + (res.emailLead ? ' · ' + res.emailLead + ' & auditor copied' : (res.emailCc ? ' · auditor copied' : '')));
+      else if (res.email === 'no-address') bad.push('no email on file for ' + cn + '. Add it in the Consultant Emails tab');
+      else if (res.email === 'failed')     bad.push('the result email failed: ' + (res.emailError || 'unknown'));
+      if (res.escalation === 'sent')        good.push('⚠ Escalated to ' + res.escalatedTo);
+      else if (res.escalation === 'failed') bad.push('the escalation failed: ' + (res.escalationError || 'unknown'));
+      else if (payload.escalate)            bad.push('the escalation was not sent. The sheet\'s Apps Script still needs the new version');
+      if (bad.length)       showToast('Saved — but ' + bad.join('; ') + (good.length ? '. ' + good.join(' · ') : ''), 'error', 7000);
+      else if (good.length) showToast(good.join(' · '), 'success', payload.escalate ? 6000 : 3500);
     })
     .catch(e => showToast('Submission failed — please re-enter: ' + e.message, 'error'));
 }
@@ -913,6 +929,7 @@ function resetForm() {
   document.getElementById('durSec').value = '';
   showDuration();
   document.getElementById('auditDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('escalate').checked = false;   // escalation is per audit, never carried over
   renderAttributes();
   refreshScore();
 }
@@ -926,10 +943,11 @@ function loadEmailPref() {
   try { document.getElementById('sendEmail').checked = localStorage.getItem('salesqa_sendEmail') === '1'; } catch (e) {}
 }
 
-function showToast(msg, type='success') {
+function showToast(msg, type='success', ms=3500) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3500);
+  clearTimeout(showToast.timer);   // a newer message is never hidden by an older timer
+  showToast.timer = setTimeout(() => t.classList.remove('show'), ms);
 }
 </script>
 </body>
